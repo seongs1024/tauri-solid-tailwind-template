@@ -30,7 +30,7 @@ const WebPageView: Component<{
                     <p>Loading...</p>
                 </Match>
                 <Match when={data.state === "ready"}>
-                    {make_div(data()!)}
+                    {make_div(props.url(), data()!)}
                 </Match>
                 <Match when={data.state === "errored"}>
                     <p>{data.error}</p>
@@ -42,10 +42,13 @@ const WebPageView: Component<{
 
 export default WebPageView;
 
-function make_div(data: string) {
+function make_div(url: string, data: string) {
     const host = document.createElement("div");
     const shadow = host?.attachShadow({ mode: "open" });
     shadow.innerHTML = data;
+    // var newBase = document.createElement("base");
+    // newBase.setAttribute("href", url);
+    // document.getElementsByTagName("head")[0].appendChild(newBase);
     return host
 }
 

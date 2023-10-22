@@ -22,6 +22,8 @@ async fn get_by_cross_origin(url: &str) -> Result<Vec<u8>, String> {
     
     let request = HttpRequestBuilder::new("GET", url)
         .map_err(|e| format!("{} {}", e.to_string(), url))?
+        .header("Cache-Control", "no-store")
+        .map_err(|e| format!("{} {}", e.to_string(), url))?
         .response_type(ResponseType::Binary);
 
     Ok(client
@@ -41,11 +43,11 @@ async fn open_docs(handle: tauri::AppHandle, url: &str) -> Result<(), String> {
         .parse()
         .map_err(|_| format!("Url error {}", url))?;
 
-    if let Some(window) = handle.get_window("external") {
-        window.set_focus();
-        window.eval(&format!("window.location.replace('{}')", url));
-        return Ok(())
-    }
+    // if let Some(window) = handle.get_window("external") {
+    //     let _ = window.set_focus();
+    //     let _ = window.eval(&format!("window.location.replace('{}')", url));
+    //     return Ok(())
+    // }
 
     let main = handle
         .get_window("main")
@@ -57,18 +59,20 @@ async fn open_docs(handle: tauri::AppHandle, url: &str) -> Result<(), String> {
     let main_size = main_phyiscal_size.to_logical::<i32>(scale_factor);
 
     let bar_width = 240.0;
-    let margin_top = 0.0;
-    let margin_bottom = 0.0;
-    let margin_right = 0.0;
-    let margin_left = 0.0;
+    let margin_top = 70.0;
+    let margin_bottom = 5.0;
+    let margin_right = 5.0;
+    let margin_left = 5.0;
 
+    let string = format!("{url}");
+    let len = string.len();
     let child = tauri::WindowBuilder::new(
             &handle,
-            "external",
+            format!("external-{}", len), //"external",
             tauri::WindowUrl::External(url)
         )
-        .decorations(false)
-        .resizable(false)
+        // .decorations(false)
+        // .resizable(false)
         .position(
             main_pos.x as f64 + bar_width + margin_left,
             main_pos.y as f64 + margin_top,
@@ -79,9 +83,21 @@ async fn open_docs(handle: tauri::AppHandle, url: &str) -> Result<(), String> {
         );
 
     #[cfg(target_os = "macos")]
-    let child = child.parent_window(main.ns_window().unwrap());
+    let child = {
+        let parent = main
+            .ns_window()
+            .map_err(|e| format!("{}", e.to_string()))?;
+        // let child = child.owner_window(parent);
+        child.parent_window(parent)
+    };
     #[cfg(windows)]
-    let child = child.parent_window(main.hwnd().unwrap());
+    let child = {
+        let parent = main
+            .hwnd()
+            .map_err(|e| format!("{}", e.to_string()))?;
+        // child.parent_window(parent)
+        child.owner_window(parent)
+    };
 
     child.build()
         .map_err(|e| format!("{}", e.to_string()))?;
